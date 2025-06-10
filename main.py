@@ -1,7 +1,7 @@
 import streamlit as st
 import json
 import os
-from datetime import datetime, date
+from datetime import datetime
 from crawler import CustomsCrawler
 
 def main():
@@ -11,12 +11,7 @@ def main():
     # 사이드바 설정
     st.sidebar.header("크롤링 설정")
     
-    # 검색 시작일 입력
-    start_date = st.sidebar.date_input(
-        "검색 시작일",
-        value=date(2024, 1, 1),
-        help="크롤링할 데이터의 시작 날짜를 선택하세요"
-    )
+
     
     # 검색 건수 (페이지 수) 입력
     max_pages = st.sidebar.number_input(
@@ -32,23 +27,60 @@ def main():
     
     # 크롤링 시작 버튼
     if st.sidebar.button("크롤링 시작", type="primary"):
-        # 진행 상황 표시
-        progress_bar = st.progress(0)
-        status_text = st.empty()
+        # 진행 상황 표시 컨테이너들
+        progress_container = st.container()
+        
+        with progress_container:
+            st.subheader("크롤링 진행 상황")
+            progress_bar = st.progress(0)
+            status_text = st.empty()
+            page_info = st.empty()
+            case_info = st.empty()
+            collected_info = st.empty()
         
         try:
             # 크롤러 인스턴스 생성
             crawler = CustomsCrawler()
             
+            # 진행 상황 업데이트 함수
+            def update_progress(current_page, total_pages, current_case=None, total_cases=None, collected_count=0):
+                # 전체 진행률 계산
+                if current_case is not None and total_cases is not None and total_cases > 0:
+                    # 페이지 내 진행률도 고려
+                    page_progress = (current_page - 1) / total_pages
+                    case_progress = current_case / total_cases / total_pages
+                    total_progress = page_progress + case_progress
+                else:
+                    total_progress = current_page / total_pages
+                
+                progress_bar.progress(min(total_progress, 1.0))
+                
+                # 상태 텍스트 업데이트
+                if current_case is not None and total_cases is not None:
+                    status_text.text(f"페이지 {current_page}/{total_pages} - 사건 {current_case}/{total_cases} 처리 중...")
+                    case_info.text(f"현재 페이지에서 {current_case}/{total_cases}개 사건 처리 완료")
+                else:
+                    status_text.text(f"페이지 {current_page}/{total_pages} 처리 중...")
+                    case_info.text("사건 링크 수집 중...")
+                
+                page_info.text(f"진행률: {total_progress*100:.1f}% (페이지 {current_page}/{total_pages})")
+                collected_info.text(f"수집된 데이터: {collected_count}건")
+            
             # 크롤링 실행
             status_text.text("크롤링을 시작합니다...")
             data = crawler.crawl_data(
-                start_date=start_date.strftime('%Y-%m-%d'),
                 max_pages=max_pages,
-                progress_callback=lambda current, total: progress_bar.progress(current / total)
+                progress_callback=update_progress
             )
             
             if data:
+                # 최종 완료 상태 표시
+                progress_bar.progress(1.0)
+                status_text.text("크롤링 완료!")
+                page_info.text(f"완료: {max_pages}개 페이지 처리")
+                case_info.text("모든 사건 처리 완료")
+                collected_info.text(f"최종 수집된 데이터: {len(data)}건")
+                
                 # 결과 표시
                 st.success(f"크롤링 완료! 총 {len(data)}건의 데이터를 수집했습니다.")
                 
@@ -68,7 +100,7 @@ def main():
                 
                 # JSON 파일 생성 및 다운로드 버튼
                 json_data = json.dumps(data, ensure_ascii=False, indent=4)
-                filename = f"customs_rulings_{start_date.strftime('%Y%m%d')}_{datetime.now().strftime('%H%M%S')}.json"
+                filename = f"customs_rulings_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
                 
                 st.download_button(
                     label="JSON 파일 다운로드",
@@ -78,25 +110,21 @@ def main():
                 )
                 
             else:
+                status_text.text("크롤링 완료 - 데이터 없음")
                 st.warning("수집된 데이터가 없습니다. 검색 조건을 확인해주세요.")
                 
         except Exception as e:
+            status_text.text("크롤링 중 오류 발생")
             st.error(f"크롤링 중 오류가 발생했습니다: {str(e)}")
             st.write("오류 세부 정보:")
             st.code(str(e))
-        
-        finally:
-            # 진행 상황 초기화
-            progress_bar.empty()
-            status_text.empty()
     
     # 사용법 안내
     st.header("사용법")
     st.write("""
-    1. **검색 시작일**: 크롤링할 데이터의 시작 날짜를 선택합니다.
-    2. **크롤링할 페이지 수**: 수집할 페이지 수를 입력합니다 (페이지당 최대 100건).
-    3. **크롤링 시작**: 버튼을 클릭하여 데이터 수집을 시작합니다.
-    4. **다운로드**: 크롤링 완료 후 JSON 파일을 다운로드할 수 있습니다.
+    1. **크롤링할 페이지 수**: 수집할 페이지 수를 입력합니다 (페이지당 최대 100건).
+    2. **크롤링 시작**: 버튼을 클릭하여 데이터 수집을 시작합니다.
+    3. **다운로드**: 크롤링 완료 후 JSON 파일을 다운로드할 수 있습니다.
     """)
     
     st.header("주의사항")

@@ -163,11 +163,11 @@ class CustomsCrawler:
 
             # 목록으로 돌아가기
             self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-            time.sleep(2)
+            time.sleep(1)
             list_page = self.driver.find_element(By.ID, "histBack")
             list_page.click()
             print("목록 버튼 클릭 완료")
-            time.sleep(2)
+            time.sleep(1)
             
             return page_data
             
@@ -180,12 +180,12 @@ class CustomsCrawler:
         try:
             # 스크롤 내리기
             self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-            time.sleep(2)
+            time.sleep(1)
             
             next_page = self.driver.find_element(By.XPATH, f"//li/a[@href='#{page_num}']")
             next_page.click()
             print(f"페이지 {page_num} 이동 완료")
-            time.sleep(3)
+            time.sleep(2)
             return True
         except Exception as e:
             print(f"Error moving to page {page_num}: {e}")
@@ -219,17 +219,21 @@ class CustomsCrawler:
                 current_page = k - 1
                 print(f"\n=== 페이지 {current_page}/{max_pages} 처리 중 ===")
                 
-                # 진행률 업데이트
-                if progress_callback:
-                    progress_callback(current_page - 1, max_pages)
-                
                 # 현재 페이지의 사건 링크들 수집
                 links = self.get_case_links()
+                
+                # 페이지 시작 시 진행률 업데이트
+                if progress_callback:
+                    progress_callback(current_page, max_pages, collected_count=len(data))
                 
                 # 각 사건별 상세 정보 스크래핑
                 for j, link in enumerate(links):
                     case_title = link['title']
                     print(f"Processing case {j + 1}/{len(links)}: {case_title}")
+                    
+                    # 각 사건 처리 시 진행률 업데이트
+                    if progress_callback:
+                        progress_callback(current_page, max_pages, j + 1, len(links), len(data))
                     
                     case_data = self.scrape_case_detail(case_title)
                     if case_data:
@@ -244,7 +248,7 @@ class CustomsCrawler:
             
             # 최종 진행률 업데이트
             if progress_callback:
-                progress_callback(max_pages, max_pages)
+                progress_callback(max_pages, max_pages, collected_count=len(data))
                 
         except Exception as e:
             print(f"크롤링 중 오류 발생: {e}")
