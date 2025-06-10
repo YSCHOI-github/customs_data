@@ -25,21 +25,46 @@ class CustomsCrawler:
         self.wait = None
         
     def setup_driver(self):
-        """Selenium WebDriver 설정"""
+        """Selenium WebDriver 설정 (Streamlit Cloud 호환)"""
         options = webdriver.ChromeOptions()
+        
+        # 기존 옵션 유지
         options.add_argument('--disable-popup-blocking')
         options.add_argument('--no-sandbox')
         options.add_argument('--disable-dev-shm-usage')
-        # 헤드리스 모드는 선택사항 (필요시 주석 해제)
-        # options.add_argument('--headless')
         
-        # webdriver-manager로 자동 설치 및 관리
-        self.driver = webdriver.Chrome(
-            service=Service(ChromeDriverManager().install()), 
-            options=options
-        )
+        # Streamlit Cloud에서 필요한 추가 옵션들
+        options.add_argument('--headless')  # GUI 없이 실행 (필수)
+        options.add_argument('--disable-gpu')
+        options.add_argument('--disable-features=VizDisplayCompositor')
+        options.add_argument('--remote-debugging-port=9222')
+        options.add_argument('--disable-extensions')
+        options.add_argument('--disable-plugins')
+        options.add_argument('--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36')
+        
+        # ChromeDriver 설정 (Streamlit Cloud 호환)
+        try:
+            # 시스템에 설치된 chromium-driver 사용 시도
+            service = Service('/usr/bin/chromedriver')
+            self.driver = webdriver.Chrome(service=service, options=options)
+        except:
+            try:
+                # webdriver-manager를 사용하지 않고 직접 시도
+                self.driver = webdriver.Chrome(options=options)
+            except:
+                try:
+                    # 마지막 시도: webdriver-manager 사용 (로컬 환경용)
+                    from webdriver_manager.chrome import ChromeDriverManager
+                    self.driver = webdriver.Chrome(
+                        service=Service(ChromeDriverManager().install()), 
+                        options=options
+                    )
+                except Exception as e:
+                    print(f"Chrome 드라이버 설정 실패: {e}")
+                    raise e
 
-        self.driver.maximize_window()
+        # 기존 설정 유지 (헤드리스 모드에서는 maximize_window 제거)
+        # self.driver.maximize_window()  # 헤드리스 모드에서는 불필요
         self.wait = WebDriverWait(self.driver, 10)
         
     def navigate_to_lawsuit_page(self):
