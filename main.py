@@ -3,17 +3,23 @@ import json
 import os
 from datetime import datetime
 from crawler import CustomsCrawler
+from crawler2 import ClassificationCrawler
 
 def main():
-    st.title("관세법령정보포털 판례 크롤러")
-    st.write("관세법령정보포털에서 소송 관련 판례 데이터를 크롤링합니다.")
+    st.title("관세법령정보포털 크롤러")
+    st.write("관세법령정보포털에서 판례 및 품목분류 데이터를 크롤링합니다.")
     
     # 사이드바 설정
     st.sidebar.header("크롤링 설정")
     
-
+    # 크롤링 타입 선택
+    crawl_type = st.sidebar.selectbox(
+        "크롤링 타입 선택",
+        ["소송 관련 판례", "국내품목분류 사례"],
+        help="크롤링할 데이터 유형을 선택하세요."
+    )
     
-    # 검색 건수 (페이지 수) 입력
+    # 공통 설정
     max_pages = st.sidebar.number_input(
         "크롤링할 페이지 수",
         min_value=1,
@@ -21,6 +27,15 @@ def main():
         value=8,
         help="크롤링할 페이지 수를 입력하세요 (페이지당 최대 100건)"
     )
+    
+    # 국내품목분류 사례용 추가 설정
+    start_date = None
+    if crawl_type == "국내품목분류 사례":
+        start_date = st.sidebar.date_input(
+            "검색 시작일",
+            value=datetime(2024, 1, 1),
+            help="검색 시작일을 선택하세요."
+        ).strftime('%Y-%m-%d')
     
     # 예상 크롤링 건수 표시
     st.sidebar.info(f"예상 크롤링 건수: 최대 {max_pages * 100}건")
@@ -39,8 +54,13 @@ def main():
             collected_info = st.empty()
         
         try:
-            # 크롤러 인스턴스 생성
-            crawler = CustomsCrawler()
+            # 크롤러 타입에 따라 인스턴스 생성
+            if crawl_type == "소송 관련 판례":
+                crawler = CustomsCrawler()
+                crawler_type_name = "판례"
+            else:  # 국내품목분류 사례
+                crawler = ClassificationCrawler()
+                crawler_type_name = "품목분류"
             
             # 진행 상황 업데이트 함수
             def update_progress(current_page, total_pages, current_case=None, total_cases=None, collected_count=0):
@@ -67,11 +87,20 @@ def main():
                 collected_info.text(f"수집된 데이터: {collected_count}건")
             
             # 크롤링 실행
-            status_text.text("크롤링을 시작합니다...")
-            data = crawler.crawl_data(
-                max_pages=max_pages,
-                progress_callback=update_progress
-            )
+            status_text.text(f"{crawler_type_name} 크롤링을 시작합니다...")
+            
+            # 크롤러 타입에 따라 다른 파라미터로 실행
+            if crawl_type == "소송 관련 판례":
+                data = crawler.crawl_data(
+                    max_pages=max_pages,
+                    progress_callback=update_progress
+                )
+            else:  # 국내품목분류 사례
+                data = crawler.crawl_data(
+                    start_date=start_date,
+                    max_pages=max_pages,
+                    progress_callback=update_progress
+                )
             
             if data:
                 # 최종 완료 상태 표시
@@ -82,7 +111,7 @@ def main():
                 collected_info.text(f"최종 수집된 데이터: {len(data)}건")
                 
                 # 결과 표시
-                st.success(f"크롤링 완료! 총 {len(data)}건의 데이터를 수집했습니다.")
+                st.success(f"{crawler_type_name} 크롤링 완료! 총 {len(data)}건의 데이터를 수집했습니다.")
                 
                 # 데이터 미리보기
                 st.subheader("데이터 미리보기")
@@ -100,7 +129,12 @@ def main():
                 
                 # JSON 파일 생성 및 다운로드 버튼
                 json_data = json.dumps(data, ensure_ascii=False, indent=4)
-                filename = f"customs_rulings_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+                
+                # 파일명을 크롤링 타입에 따라 구분
+                if crawl_type == "소송 관련 판례":
+                    filename = f"customs_rulings_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+                else:
+                    filename = f"classification_cases_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
                 
                 st.download_button(
                     label="JSON 파일 다운로드",
@@ -121,10 +155,14 @@ def main():
     
     # 사용법 안내
     st.header("사용법")
-    st.write("""
-    1. **크롤링할 페이지 수**: 수집할 페이지 수를 입력합니다 (페이지당 최대 100건).
-    2. **크롤링 시작**: 버튼을 클릭하여 데이터 수집을 시작합니다.
-    3. **다운로드**: 크롤링 완료 후 JSON 파일을 다운로드할 수 있습니다.
+    st.write(f"""
+    1. **크롤링 타입 선택**: 수집할 데이터 유형을 선택합니다.
+       - 소송 관련 판례: 관세법령정보포털의 판례 데이터
+       - 국내품목분류 사례: 품목분류 위원회결정사항 데이터
+    2. **크롤링할 페이지 수**: 수집할 페이지 수를 입력합니다 (페이지당 최대 100건).
+    3. **추가 설정**: 국내품목분류 사례의 경우 검색 시작일을 설정할 수 있습니다.
+    4. **크롤링 시작**: 버튼을 클릭하여 데이터 수집을 시작합니다.
+    5. **다운로드**: 크롤링 완료 후 JSON 파일을 다운로드할 수 있습니다.
     """)
     
     st.header("주의사항")
@@ -132,6 +170,7 @@ def main():
     - 크롤링 시간은 페이지 수와 네트워크 상황에 따라 달라질 수 있습니다.
     - 너무 많은 페이지를 한 번에 크롤링하면 시간이 오래 걸릴 수 있습니다.
     - 웹사이트의 정책을 준수하여 적절한 간격으로 크롤링하세요.
+    - 국내품목분류 사례 크롤링 시 검색 시작일을 적절히 설정하세요.
     """)
 
 if __name__ == "__main__":
