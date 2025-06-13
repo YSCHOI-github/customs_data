@@ -1,5 +1,5 @@
 ###############
-# Environments
+# 품목분류 국내사례 > 협의회결정사항 크롤링링
 ###############
 
 from selenium import webdriver
@@ -18,7 +18,7 @@ import pandas as pd
 from io import StringIO
 import json
 
-class ClassificationCrawler:
+class ClassificationCrawler3:
     def __init__(self):
         """크롤러 초기화"""
         self.driver = None
@@ -89,12 +89,12 @@ class ClassificationCrawler:
         print("품목분류 국내사례 메뉴 클릭 완료")
         time.sleep(2)
 
-        # 4. "위원회결정사항" 클릭
+        # 4. "협의회결정사항" 클릭
         committee_decisions_menu = self.wait.until(
-            EC.element_to_be_clickable((By.ID, "LEFTMENU_LNK_UI-ULS-0203-008S"))
+            EC.element_to_be_clickable((By.ID, "LEFTMENU_LNK_UI-ULS-0203-005S"))
         )
         committee_decisions_menu.click()
-        print("위원회결정사항 메뉴 클릭 완료")
+        print("협의회결정사항 메뉴 클릭 완료")
         time.sleep(2)
 
         # 5. 날짜 입력
@@ -161,7 +161,7 @@ class ClassificationCrawler:
 
             # 테이블이 로드될 때까지 대기
             wait = WebDriverWait(self.driver, 10)
-            table = wait.until(EC.presence_of_element_located((By.ID, "ULS0203040S_T1_table1")))
+            table = wait.until(EC.presence_of_element_located((By.ID, "ULS0203039S_T1_table1")))
             
             # 테이블 데이터 추출
             data_temp = {}
@@ -294,7 +294,7 @@ class ClassificationCrawler:
 # 독립 실행 시 테스트 코드
 if __name__ == "__main__":
     # 테스트 실행
-    crawler = ClassificationCrawler()
+    crawler = ClassificationCrawler3()
     
     # 날짜 설정
     srchStDt = '2024-01-01'
