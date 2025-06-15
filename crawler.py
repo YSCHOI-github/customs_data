@@ -100,9 +100,9 @@ class CustomsCrawler:
         # 5. "n개 보기" 설정
         dropdown = self.driver.find_element(By.NAME, 'pagePerRecord')
         select = Select(dropdown)
-        select.select_by_value('10')
+        select.select_by_value('50')
         self.driver.implicitly_wait(2)
-        print("10개 보기 설정 완료")
+        print("50개 보기 설정 완료")
         
     def get_case_links(self):
         """현재 페이지의 모든 사건번호별 세부정보 링크 수집"""

@@ -18,7 +18,7 @@ import pandas as pd
 from io import StringIO
 import json
 
-class ClassificationCrawler4:
+class ClassificationCrawler_cn:
     def __init__(self):
         """크롤러 초기화"""
         self.driver = None
@@ -68,7 +68,7 @@ class ClassificationCrawler4:
         self.wait = WebDriverWait(self.driver, 10)
         
     def navigate_to_classification_page(self, start_date='2024-01-01'):
-        """관세법령정보포털 > 세계HS > 품목분류 국내사례 > 품목분류사례 페이지로 이동"""
+        """관세법령정보포털 > 세계HS > 품목분류 외국사례 > 일본 페이지로 이동"""
         # 1. 사이트 접속
         self.driver.get("https://unipass.customs.go.kr/clip/index.do")
         time.sleep(2)
@@ -81,29 +81,29 @@ class ClassificationCrawler4:
         print("세계HS 메뉴 클릭 완료")
         time.sleep(2)
 
-        # 3. "품목분류 국내사례" 클릭
+        # 3. "품목분류 외국사례" 클릭
         domestic_cases_menu = self.wait.until(
-            EC.element_to_be_clickable((By.ID, "LEFTMENU_LNK_M_ULS0807030051"))
+            EC.element_to_be_clickable((By.ID, "LEFTMENU_LNK_M_ULS0807030052"))
         )
         domestic_cases_menu.click()
-        print("품목분류 국내사례 메뉴 클릭 완료")
+        print("품목분류 외국사례 메뉴 클릭 완료")
         time.sleep(2)
 
-        # 4. "품목분류사례" 클릭
+        # 4. "중국" 클릭
         committee_decisions_menu = self.wait.until(
-            EC.element_to_be_clickable((By.ID, "LEFTMENU_LNK_UI-ULS-0203-002S"))
+            EC.element_to_be_clickable((By.ID, "LEFTMENU_LNK_UI-ULS-0203-023S"))
         )
         committee_decisions_menu.click()
-        print("품목분류사례례 메뉴 클릭 완료")
+        print("중국 메뉴 클릭 완료")
         time.sleep(2)
 
-        # 5. 날짜 입력
+        # 5. 검색어 입력
         date_input = self.wait.until(
-            EC.presence_of_element_located((By.ID, "srchStDt"))  # 날짜 입력 필드의 ID
+            EC.presence_of_element_located((By.ID, "srchSrwr"))  # 검색어 입력 필드의 ID
         )
         date_input.clear()  # 기존 값 지우기
-        date_input.send_keys(start_date)  # 조회 시작 날짜 입력
-        print(f"날짜 {start_date} 입력 완료")
+        date_input.send_keys("품목")  # 품목 입력
+        print(f"검색어 입력 완료")
         date_input.send_keys(Keys.RETURN)  # Enter 키 입력
         time.sleep(2)
 
@@ -137,10 +137,10 @@ class ClassificationCrawler4:
 
         # 팝업 링크들 찾기
         popup_link_wait = self.wait.until(
-            EC.element_to_be_clickable((By.CSS_SELECTOR, "td.ellipsis.hlzone1"))
+            EC.element_to_be_clickable((By.CSS_SELECTOR, "a.dtlInfo.org")) # td.ellipsis.hlzone2
         )
 
-        links = self.driver.find_elements(By.CSS_SELECTOR, "td.ellipsis.hlzone1")
+        links = self.driver.find_elements(By.CSS_SELECTOR, "a.dtlInfo.org")  # td.ellipsis.hlzone2
         print(f"Found {len(links)} links to process.")
         return links
         
@@ -161,7 +161,7 @@ class ClassificationCrawler4:
 
             # 테이블이 로드될 때까지 대기
             wait = WebDriverWait(self.driver, 10)
-            table = wait.until(EC.presence_of_element_located((By.ID, "ULS0203037S_T1_table1")))
+            table = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "table.org")))
             
             # 테이블 데이터 추출
             data_temp = {}
@@ -294,7 +294,7 @@ class ClassificationCrawler4:
 # 독립 실행 시 테스트 코드
 if __name__ == "__main__":
     # 테스트 실행
-    crawler = ClassificationCrawler4()
+    crawler = ClassificationCrawler_cn()
     
     # 날짜 설정
     srchStDt = '2024-01-01'
