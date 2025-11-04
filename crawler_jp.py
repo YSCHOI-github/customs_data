@@ -67,11 +67,15 @@ class ClassificationCrawler_jp:
         # self.driver.maximize_window()  # 헤드리스 모드에서는 불필요
         self.wait = WebDriverWait(self.driver, 10)
         
-    def navigate_to_classification_page(self, start_date='2024-01-01'):
+    def navigate_to_classification_page(self, start_date='2024-01-01', navigation_callback=None, items_per_page=10):
         """관세법령정보포털 > 세계HS > 품목분류 외국사례 > 일본 페이지로 이동"""
+        if navigation_callback:
+            navigation_callback("사이트 접속", "running")
         # 1. 사이트 접속
         self.driver.get("https://unipass.customs.go.kr/clip/index.do")
         time.sleep(2)
+        if navigation_callback:
+            navigation_callback("사이트 접속", "completed")
         
         # 2. "세계HS" 클릭
         world_hs_menu = self.wait.until(
@@ -80,6 +84,8 @@ class ClassificationCrawler_jp:
         world_hs_menu.click()
         print("세계HS 메뉴 클릭 완료")
         time.sleep(2)
+        if navigation_callback:
+            navigation_callback("사이트 접속", "completed")
 
         # 3. "품목분류 외국사례" 클릭
         domestic_cases_menu = self.wait.until(
@@ -88,6 +94,8 @@ class ClassificationCrawler_jp:
         domestic_cases_menu.click()
         print("품목분류 외국사례 메뉴 클릭 완료")
         time.sleep(2)
+        if navigation_callback:
+            navigation_callback("사이트 접속", "completed")
 
         # 4. "일본" 클릭
         committee_decisions_menu = self.wait.until(
@@ -96,6 +104,8 @@ class ClassificationCrawler_jp:
         committee_decisions_menu.click()
         print("일본 메뉴 클릭 완료")
         time.sleep(2)
+        if navigation_callback:
+            navigation_callback("사이트 접속", "completed")
 
         # 5. 검색어 입력
         date_input = self.wait.until(
@@ -106,6 +116,8 @@ class ClassificationCrawler_jp:
         print(f"검색어 입력 완료")
         date_input.send_keys(Keys.RETURN)  # Enter 키 입력
         time.sleep(2)
+        if navigation_callback:
+            navigation_callback("사이트 접속", "completed")
 
         # 6. "세로보기" 클릭
         popup_button = self.wait.until(
@@ -121,13 +133,15 @@ class ClassificationCrawler_jp:
         self.driver.execute_script("arguments[0].click();", popup_button)
         print("팝업보기 버튼 클릭 완료")
         time.sleep(2)
+        if navigation_callback:
+            navigation_callback("사이트 접속", "completed")
         
         # 7. "n개 보기" 설정
         dropdown = self.driver.find_element(By.NAME, 'pagePerRecord')
         select = Select(dropdown)
-        select.select_by_value('50')
+        select.select_by_value(str(items_per_page))
         self.driver.implicitly_wait(2)
-        print("50개 보기 설정 완료")
+        print(f"{items_per_page}개 보기 설정 완료")
         
     def get_case_links(self):
         """현재 페이지의 모든 사건별 세부정보 링크 수집"""
@@ -208,7 +222,7 @@ class ClassificationCrawler_jp:
             print(f"Error moving to page {page_num}: {e}")
             return False
             
-    def crawl_data(self, start_date='2024-01-01', max_pages=8, progress_callback=None):
+    def crawl_data(self, start_date='2024-01-01', max_pages=8, progress_callback=None, navigation_callback=None, items_per_page=10):
         """
         메인 크롤링 함수
         
@@ -228,7 +242,7 @@ class ClassificationCrawler_jp:
             print("WebDriver 설정 완료")
             
             # 위원회결정사항 페이지로 이동
-            self.navigate_to_classification_page(start_date)
+            self.navigate_to_classification_page(start_date, navigation_callback, items_per_page)
             print("위원회결정사항 페이지 이동 완료")
             
             # 각 페이지별 크롤링

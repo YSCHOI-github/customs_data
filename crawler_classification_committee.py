@@ -67,37 +67,55 @@ class ClassificationCrawler:
         # self.driver.maximize_window()  # 헤드리스 모드에서는 불필요
         self.wait = WebDriverWait(self.driver, 10)
         
-    def navigate_to_classification_page(self, start_date='2024-01-01'):
+    def navigate_to_classification_page(self, start_date='2024-01-01', navigation_callback=None, items_per_page=10):
         """관세법령정보포털 > 세계HS > 품목분류 국내사례 > 위원회결정사항 페이지로 이동"""
         # 1. 사이트 접속
+        if navigation_callback:
+            navigation_callback("사이트 접속", "running")
         self.driver.get("https://unipass.customs.go.kr/clip/index.do")
         time.sleep(2)
-        
+        if navigation_callback:
+            navigation_callback("사이트 접속", "completed")
+
         # 2. "세계HS" 클릭
+        if navigation_callback:
+            navigation_callback("세계HS 메뉴 탐색", "running")
         world_hs_menu = self.wait.until(
             EC.element_to_be_clickable((By.ID, "TOPMENU_LNK_M_ULS0200000000"))
         )
         world_hs_menu.click()
         print("세계HS 메뉴 클릭 완료")
         time.sleep(2)
+        if navigation_callback:
+            navigation_callback("세계HS 메뉴 탐색", "completed")
 
         # 3. "품목분류 국내사례" 클릭
+        if navigation_callback:
+            navigation_callback("품목분류 국내사례 메뉴 선택", "running")
         domestic_cases_menu = self.wait.until(
             EC.element_to_be_clickable((By.ID, "LEFTMENU_LNK_M_ULS0807030051"))
         )
         domestic_cases_menu.click()
         print("품목분류 국내사례 메뉴 클릭 완료")
         time.sleep(2)
+        if navigation_callback:
+            navigation_callback("품목분류 국내사례 메뉴 선택", "completed")
 
         # 4. "위원회결정사항" 클릭
+        if navigation_callback:
+            navigation_callback("위원회결정사항 페이지 이동", "running")
         committee_decisions_menu = self.wait.until(
             EC.element_to_be_clickable((By.ID, "LEFTMENU_LNK_UI-ULS-0203-008S"))
         )
         committee_decisions_menu.click()
         print("위원회결정사항 메뉴 클릭 완료")
         time.sleep(2)
+        if navigation_callback:
+            navigation_callback("위원회결정사항 페이지 이동", "completed")
 
         # 5. 날짜 입력
+        if navigation_callback:
+            navigation_callback(f"검색 시작일 설정 ({start_date})", "running")
         date_input = self.wait.until(
             EC.presence_of_element_located((By.ID, "srchStDt"))  # 날짜 입력 필드의 ID
         )
@@ -106,8 +124,12 @@ class ClassificationCrawler:
         print(f"날짜 {start_date} 입력 완료")
         date_input.send_keys(Keys.RETURN)  # Enter 키 입력
         time.sleep(2)
+        if navigation_callback:
+            navigation_callback(f"검색 시작일 설정 ({start_date})", "completed")
 
         # 6. "세로보기" 클릭
+        if navigation_callback:
+            navigation_callback("세로보기 설정", "running")
         popup_button = self.wait.until(
             EC.presence_of_element_located((By.ID, "VRTC"))  # 버튼의 ID 확인
         )
@@ -121,13 +143,19 @@ class ClassificationCrawler:
         self.driver.execute_script("arguments[0].click();", popup_button)
         print("팝업보기 버튼 클릭 완료")
         time.sleep(2)
-        
+        if navigation_callback:
+            navigation_callback("세로보기 설정", "completed")
+
         # 7. "n개 보기" 설정
+        if navigation_callback:
+            navigation_callback(f"검색 옵션 설정 ({items_per_page}개씩 보기)", "running")
         dropdown = self.driver.find_element(By.NAME, 'pagePerRecord')
         select = Select(dropdown)
-        select.select_by_value('50')
+        select.select_by_value(str(items_per_page))
         self.driver.implicitly_wait(2)
-        print("50개 보기 설정 완료")
+        print(f"{items_per_page}개 보기 설정 완료")
+        if navigation_callback:
+            navigation_callback(f"검색 옵션 설정 ({items_per_page}개씩 보기)", "completed")
         
     def get_case_links(self):
         """현재 페이지의 모든 사건별 세부정보 링크 수집"""
@@ -208,27 +236,29 @@ class ClassificationCrawler:
             print(f"Error moving to page {page_num}: {e}")
             return False
             
-    def crawl_data(self, start_date='2024-01-01', max_pages=8, progress_callback=None):
+    def crawl_data(self, start_date='2024-01-01', max_pages=8, progress_callback=None, navigation_callback=None, items_per_page=10):
         """
         메인 크롤링 함수
-        
+
         Args:
             start_date (str): 검색 시작일 (YYYY-MM-DD 형식)
             max_pages (int): 크롤링할 최대 페이지 수
             progress_callback (function): 진행률 콜백 함수
-            
+            navigation_callback (function): 네비게이션 콜백 함수
+            items_per_page (int): 페이지당 표시 개수 (10, 20, 30, 50, 100)
+
         Returns:
             list: 크롤링된 데이터 리스트
         """
         data = []
-        
+
         try:
             # WebDriver 설정
             self.setup_driver()
             print("WebDriver 설정 완료")
-            
+
             # 위원회결정사항 페이지로 이동
-            self.navigate_to_classification_page(start_date)
+            self.navigate_to_classification_page(start_date, navigation_callback, items_per_page)
             print("위원회결정사항 페이지 이동 완료")
             
             # 각 페이지별 크롤링

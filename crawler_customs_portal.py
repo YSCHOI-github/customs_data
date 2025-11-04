@@ -67,42 +67,62 @@ class CustomsCrawler:
         # self.driver.maximize_window()  # 헤드리스 모드에서는 불필요
         self.wait = WebDriverWait(self.driver, 10)
         
-    def navigate_to_lawsuit_page(self):
+    def navigate_to_lawsuit_page(self, navigation_callback=None, items_per_page=10):
         """관세법령정보포털 > 법원/판례 등 > 판례/결정례 > 소송 페이지로 이동"""
         # 1. 사이트 접속
+        if navigation_callback:
+            navigation_callback("사이트 접속", "running")
         self.driver.get("https://unipass.customs.go.kr/clip/index.do")
         time.sleep(2)
-        
+        if navigation_callback:
+            navigation_callback("사이트 접속", "completed")
+
         # 2. "법령판례등" 클릭
+        if navigation_callback:
+            navigation_callback("법령판례 메뉴 탐색", "running")
         world_hs_menu = self.wait.until(
             EC.element_to_be_clickable((By.ID, "TOPMENU_LNK_M_ULS0100000000"))
         )
         world_hs_menu.click()
         print("법령판례 등 메뉴 클릭 완료")
         time.sleep(2)
+        if navigation_callback:
+            navigation_callback("법령판례 메뉴 탐색", "completed")
 
         # 3. "판례결정례" 클릭
+        if navigation_callback:
+            navigation_callback("판례결정례 메뉴 선택", "running")
         domestic_cases_menu = self.wait.until(
             EC.element_to_be_clickable((By.ID, "LEFTMENU_LNK_M_ULS0105000000"))
         )
         domestic_cases_menu.click()
         print("판례결정례 메뉴 클릭 완료")
         time.sleep(2)
+        if navigation_callback:
+            navigation_callback("판례결정례 메뉴 선택", "completed")
 
         # 4. "소송" 클릭
+        if navigation_callback:
+            navigation_callback("소송 페이지 이동", "running")
         committee_decisions_menu = self.wait.until(
             EC.element_to_be_clickable((By.ID, "LEFTMENU_LNK_UI-ULS-0105-003Q"))
         )
         committee_decisions_menu.click()
         print("소송 메뉴 클릭 완료")
         time.sleep(2)
+        if navigation_callback:
+            navigation_callback("소송 페이지 이동", "completed")
 
         # 5. "n개 보기" 설정
+        if navigation_callback:
+            navigation_callback(f"검색 옵션 설정 ({items_per_page}개씩 보기)", "running")
         dropdown = self.driver.find_element(By.NAME, 'pagePerRecord')
         select = Select(dropdown)
-        select.select_by_value('50')
+        select.select_by_value(str(items_per_page))
         self.driver.implicitly_wait(2)
-        print("50개 보기 설정 완료")
+        print(f"{items_per_page}개 보기 설정 완료")
+        if navigation_callback:
+            navigation_callback(f"검색 옵션 설정 ({items_per_page}개씩 보기)", "completed")
         
     def get_case_links(self):
         """현재 페이지의 모든 사건번호별 세부정보 링크 수집"""
@@ -191,27 +211,29 @@ class CustomsCrawler:
             print(f"Error moving to page {page_num}: {e}")
             return False
             
-    def crawl_data(self, start_date='2024-01-01', max_pages=8, progress_callback=None):
+    def crawl_data(self, start_date='2024-01-01', max_pages=8, progress_callback=None, navigation_callback=None, items_per_page=10):
         """
         메인 크롤링 함수
-        
+
         Args:
             start_date (str): 검색 시작일 (YYYY-MM-DD 형식)
             max_pages (int): 크롤링할 최대 페이지 수
             progress_callback (function): 진행률 콜백 함수
-            
+            navigation_callback (function): 네비게이션 콜백 함수
+            items_per_page (int): 페이지당 표시 개수 (10, 20, 30, 50, 100)
+
         Returns:
             list: 크롤링된 데이터 리스트
         """
         data = []
-        
+
         try:
             # WebDriver 설정
             self.setup_driver()
             print("WebDriver 설정 완료")
-            
+
             # 소송 페이지로 이동
-            self.navigate_to_lawsuit_page()
+            self.navigate_to_lawsuit_page(navigation_callback=navigation_callback, items_per_page=items_per_page)
             print("소송 페이지 이동 완료")
             
             # 각 페이지별 크롤링

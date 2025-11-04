@@ -5,7 +5,7 @@
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support.ui import WebDriverWait, Select
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
@@ -63,14 +63,20 @@ class LawPortalCrawler_tax:
 
         self.wait = WebDriverWait(self.driver, 10)
         
-    def navigate_to_precedents_page(self, search_keyword="관세"):
+    def navigate_to_precedents_page(self, search_keyword="관세", items_per_page=50, navigation_callback=None):
         """국가법령정보센터 > 판례·해석례등 페이지로 이동 및 검색"""
         # 1. 사이트 접속
+        if navigation_callback:
+            navigation_callback("사이트 접속", "running")
         self.driver.get("https://www.law.go.kr/LSW/main.html")
         time.sleep(2)
         print("홈페이지 접속 완료")
+        if navigation_callback:
+            navigation_callback("사이트 접속", "completed")
         
         # 2. "판례,해석례등" 메뉴 클릭
+        if navigation_callback:
+            navigation_callback("판례·해석례등 메뉴 탐색", "running")
         try:
             precedents_menu = self.wait.until(
                 EC.element_to_be_clickable((By.XPATH, "//a[contains(text(), '판례·해석례등')]"))
@@ -87,11 +93,15 @@ class LawPortalCrawler_tax:
                 # 직접 URL로 이동
                 self.driver.get("https://www.law.go.kr/precSc.do?menuId=7&subMenuId=47&tabMenuId=213")
                 print("직접 URL로 판례 페이지 이동")
-        
+
         # 페이지 로딩 대기
         time.sleep(3)
+        if navigation_callback:
+            navigation_callback("판례·해석례등 메뉴 탐색", "completed")
         
         # 3. 검색어 입력
+        if navigation_callback:
+            navigation_callback(f"검색어 입력 ('{search_keyword}')", "running")
         try:
             search_input = self.wait.until(
                 EC.presence_of_element_located((By.XPATH, '//*[@id="sr_area"]/div/div/input'))
@@ -105,13 +115,37 @@ class LawPortalCrawler_tax:
         search_input.clear()
         search_input.send_keys(search_keyword)
         print(f"검색어 '{search_keyword}' 입력 완료")
+        if navigation_callback:
+            navigation_callback(f"검색어 입력 ('{search_keyword}')", "completed")
 
         # 4. 엔터키 입력으로 검색 실행
+        if navigation_callback:
+            navigation_callback("검색 실행", "running")
         search_input.send_keys(Keys.RETURN)
         print("엔터키 입력으로 검색 실행")
 
         # 5. 검색 결과 로딩 대기
         time.sleep(5)
+        if navigation_callback:
+            navigation_callback("검색 실행", "completed")
+
+        # 6. 페이지당 표시 개수 설정
+        if navigation_callback:
+            navigation_callback(f"검색 옵션 설정 ({items_per_page}개씩 보기)", "running")
+        try:
+            dropdown = self.wait.until(
+                EC.presence_of_element_located((By.NAME, 'sunbun'))
+            )
+            select = Select(dropdown)
+            select.select_by_value(str(items_per_page))
+            print(f"{items_per_page}개씩 보기 설정 완료")
+            time.sleep(2)
+            if navigation_callback:
+                navigation_callback(f"검색 옵션 설정 ({items_per_page}개씩 보기)", "completed")
+        except Exception as e:
+            print(f"페이지당 표시 개수 설정 실패: {e}")
+            if navigation_callback:
+                navigation_callback(f"검색 옵션 설정 ({items_per_page}개씩 보기)", "completed")
         
     def get_hidden_case_content(self, title_element):
         """숨겨진 판례 내용 가져오기"""
@@ -268,10 +302,10 @@ class LawPortalCrawler_tax:
                 "내용": f"내용 추출 실패: {str(e)}"
             }
         
-    def scrape_page_data(self, page_num):
+    def scrape_page_data(self, page_num, max_pages=1, progress_callback=None, base_collected_count=0):
         """특정 페이지의 데이터 스크래핑"""
         page_data = []
-        
+
         try:
             print(f"\n== {page_num} 페이지 크롤링 시작 ==")
 
@@ -296,7 +330,11 @@ class LawPortalCrawler_tax:
                 print(f"대체 선택자로 {len(table_rows)}개의 행 발견")
 
             # 테이블 데이터 수집 (행 순회)
+            # 예상 항목 수 계산 (행 수의 절반, 각 항목이 2행으로 구성)
+            estimated_items = len(table_rows) // 2
+
             i = 0
+            item_index = 0
             while i < len(table_rows):
                 try:
                     # 제목 행
@@ -369,7 +407,12 @@ class LawPortalCrawler_tax:
                         number = title_row.find_element(By.TAG_NAME, "td").text.strip()
                     except NoSuchElementException:
                         number = str(i//2 + 1)
-                    
+
+                    # 항목별 진행률 업데이트
+                    item_index += 1
+                    if progress_callback:
+                        progress_callback(page_num, max_pages, item_index, estimated_items, base_collected_count + len(page_data))
+
                     # 판례의 상세 내용 가져오기
                     case_content = {}
                     
@@ -398,8 +441,8 @@ class LawPortalCrawler_tax:
                         item_data["판례전문"] = case_content.get("내용", "")
                     
                     page_data.append(item_data)
-                    
-                    print(f"항목 {number} 추출 완료: {title[:30]}...")
+
+                    print(f"항목 {item_index}/{estimated_items} 추출 완료: {title[:30]}...")
                     
                     # 다음 제목 행으로 이동
                     i += 2
@@ -413,15 +456,17 @@ class LawPortalCrawler_tax:
             
         return page_data
         
-    def crawl_data(self, search_keyword="관세", max_pages=5, progress_callback=None):
+    def crawl_data(self, search_keyword="관세", max_pages=5, progress_callback=None, navigation_callback=None, items_per_page=50):
         """
         메인 크롤링 함수
-        
+
         Args:
             search_keyword (str): 검색 키워드
             max_pages (int): 크롤링할 최대 페이지 수
             progress_callback (function): 진행률 콜백 함수
-            
+            navigation_callback (function): 네비게이션 콜백 함수
+            items_per_page (int): 페이지당 표시 개수 (50, 100, 150)
+
         Returns:
             list: 크롤링된 데이터 리스트
         """
@@ -431,23 +476,23 @@ class LawPortalCrawler_tax:
             # WebDriver 설정
             self.setup_driver()
             print("WebDriver 설정 완료")
-            
+
             # 판례 페이지로 이동 및 검색
-            self.navigate_to_precedents_page(search_keyword)
+            self.navigate_to_precedents_page(search_keyword, items_per_page, navigation_callback)
             print(f"'{search_keyword}' 검색 완료")
-            
+
             # 각 페이지별 크롤링
             for page_num in range(1, max_pages + 1):
                 print(f"\n=== 페이지 {page_num}/{max_pages} 처리 중 ===")
-                
-                # 진행률 업데이트
+
+                # 진행률 업데이트 (페이지 시작 시)
                 if progress_callback:
                     progress_callback(page_num, max_pages, collected_count=len(data))
-                
-                # 현재 페이지 데이터 스크래핑
-                page_data = self.scrape_page_data(page_num)
+
+                # 현재 페이지 데이터 스크래핑 (progress_callback 전달)
+                page_data = self.scrape_page_data(page_num, max_pages, progress_callback, len(data))
                 data.extend(page_data)
-                
+
                 print(f"페이지 {page_num} 완료: {len(page_data)}건 수집")
             
             # 최종 진행률 업데이트
