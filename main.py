@@ -399,6 +399,14 @@ def main():
             help="한 페이지에 표시할 데이터 개수를 선택하세요.",
             disabled=st.session_state.show_results
         )
+    elif crawl_type == "국가법령정보센터 내국세 판례":
+        items_per_page = st.sidebar.selectbox(
+            "페이지당 표시 개수",
+            [50, 100, 150],
+            index=0,
+            help="한 페이지에 표시할 데이터 개수를 선택하세요.",
+            disabled=st.session_state.show_results
+        )
 
     # 검색어 입력 필드
     search_keyword = ""
@@ -410,38 +418,18 @@ def main():
             disabled=st.session_state.show_results
         )
 
-    # 크롤링 방식 선택
+    # 크롤링 범위 설정
     st.sidebar.subheader("크롤링 범위 설정")
-    crawl_mode = st.sidebar.radio(
-        "크롤링 방식",
-        ["페이지 수로 지정", "건수로 지정"],
-        help="페이지 수 또는 목표 건수를 선택하세요.",
+
+    max_pages = st.sidebar.number_input(
+        "크롤링할 페이지 수",
+        min_value=1,
+        max_value=50,
+        value=8,
+        help=f"크롤링할 페이지 수를 입력하세요 (페이지당 최대 {items_per_page}건)",
         disabled=st.session_state.show_results
     )
-
-    if crawl_mode == "페이지 수로 지정":
-        max_pages = st.sidebar.number_input(
-            "크롤링할 페이지 수",
-            min_value=1,
-            max_value=50,
-            value=8,
-            help=f"크롤링할 페이지 수를 입력하세요 (페이지당 최대 {items_per_page}건)",
-            disabled=st.session_state.show_results
-        )
-        target_count = None
-        st.sidebar.info(f"예상 크롤링 건수: 최대 {max_pages * items_per_page}건")
-    else:
-        target_count = st.sidebar.number_input(
-            "목표 크롤링 건수",
-            min_value=10,
-            max_value=2500,
-            value=100,
-            step=10,
-            help="수집할 목표 건수를 입력하세요",
-            disabled=st.session_state.show_results
-        )
-        max_pages = (target_count // 50) + 1
-        st.sidebar.info(f"예상 페이지 수: 약 {max_pages}페이지")
+    st.sidebar.info(f"예상 크롤링 건수: 최대 {max_pages * items_per_page}건")
 
     # 국내품목분류 사례용 추가 설정
     start_date = None
@@ -566,13 +554,9 @@ def main():
                 progress_percentage = total_progress * 100
                 progress_metric.metric("전체 진행률", f"{progress_percentage:.1f}%", f"페이지 {current_page}/{total_pages}")
 
-                # 목표 대비 성공률
-                if target_count:
-                    success_rate = (collected_count / target_count * 100) if target_count > 0 else 0
-                    collected_metric.metric("수집된 데이터", f"{collected_count}건", f"목표: {target_count}건 ({success_rate:.1f}%)")
-                else:
-                    expected_max = max_pages * items_per_page
-                    collected_metric.metric("수집된 데이터", f"{collected_count}건", f"예상: ~{expected_max}건")
+                # 수집 데이터 표시
+                expected_max = max_pages * items_per_page
+                collected_metric.metric("수집된 데이터", f"{collected_count}건", f"예상: ~{expected_max}건")
 
                 # 단계 UI 업데이트
                 with stage_container.container():
@@ -598,7 +582,8 @@ def main():
                     search_keyword=search_keyword,
                     max_pages=max_pages,
                     progress_callback=update_progress,
-                    navigation_callback=navigation_callback
+                    navigation_callback=navigation_callback,
+                    items_per_page=items_per_page
                 )
             else:  # 국내품목분류 사례들
                 data = crawler.crawl_data(
@@ -615,11 +600,6 @@ def main():
             with stage_container.container():
                 render_progress_stages()
 
-            # 건수 제한 적용
-            if target_count and data and len(data) > target_count:
-                data = data[:target_count]
-                add_log(f"목표 건수 {target_count}건에 맞춰 데이터를 제한했습니다.", "INFO", 'process')
-
             update_stage('process', 'completed', f'{len(data) if data else 0}건 데이터 정리 완료')
             with stage_container.container():
                 render_progress_stages()
@@ -629,8 +609,6 @@ def main():
                 "crawler_type": crawler_type_name,
                 "total_collected": len(data) if data else 0,
                 "target_pages": max_pages,
-                "target_count": target_count,
-                "crawl_mode": crawl_mode,
                 "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             }
 
@@ -643,12 +621,7 @@ def main():
 
                 # 성공률 계산 및 메트릭 업데이트
                 progress_metric.metric("전체 진행률", "100%", f"완료: {max_pages}개 페이지")
-
-                if target_count:
-                    success_rate = (len(data) / target_count * 100)
-                    collected_metric.metric("최종 수집 데이터", f"{len(data)}건", f"목표 대비 {success_rate:.1f}%")
-                else:
-                    collected_metric.metric("최종 수집 데이터", f"{len(data)}건")
+                collected_metric.metric("최종 수집 데이터", f"{len(data)}건")
 
                 # 결과를 session state에 저장
                 st.session_state.crawling_result = data
@@ -699,18 +672,12 @@ def main():
         st.header("📊 크롤링 결과")
 
         # 통계 정보
-        col1, col2, col3, col4 = st.columns(4)
+        col1, col2, col3 = st.columns(3)
         with col1:
             st.metric("수집 건수", f"{stats['total_collected']}건")
         with col2:
             st.metric("크롤링 페이지", f"{stats['target_pages']}페이지")
         with col3:
-            if stats['target_count']:
-                success_rate = (stats['total_collected'] / stats['target_count'] * 100)
-                st.metric("목표 달성률", f"{success_rate:.1f}%")
-            else:
-                st.metric("수집 방식", "페이지 기준")
-        with col4:
             st.metric("크롤링 시각", stats['timestamp'].split()[1])
 
         # 데이터 미리보기
