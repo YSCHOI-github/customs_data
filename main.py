@@ -407,6 +407,22 @@ def main():
             help="한 페이지에 표시할 데이터 개수를 선택하세요.",
             disabled=st.session_state.show_results
         )
+    elif crawl_type in ["국내품목분류위원회 사례", "국내품목분류협의회 사례", "품목분류 사례"]:
+        items_per_page = st.sidebar.selectbox(
+            "페이지당 표시 개수",
+            [10, 20, 30, 50, 100],
+            index=0,
+            help="한 페이지에 표시할 데이터 개수를 선택하세요.",
+            disabled=st.session_state.show_results
+        )
+    elif crawl_type in ["미국 품목분류 사례", "EU 품목분류 사례", "일본 품목분류 사례", "중국 품목분류 사례"]:
+        items_per_page = st.sidebar.selectbox(
+            "페이지당 표시 개수",
+            [10, 20, 30, 50, 100],
+            index=0,
+            help="한 페이지에 표시할 데이터 개수를 선택하세요.",
+            disabled=st.session_state.show_results
+        )
 
     # 검색어 입력 필드
     search_keyword = ""
@@ -590,7 +606,8 @@ def main():
                     start_date=start_date,
                     max_pages=max_pages,
                     progress_callback=update_progress,
-                    navigation_callback=navigation_callback
+                    navigation_callback=navigation_callback,
+                    items_per_page=items_per_page
                 )
 
             # 4단계: 데이터 처리
