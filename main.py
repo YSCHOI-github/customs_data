@@ -355,114 +355,115 @@ def main():
     st.title("관세법령정보포털 크롤러")
     st.write("관세법령정보포털에서 판례 및 품목분류 데이터를 크롤링합니다.")
 
+    # 메인 화면: 크롤링 설정 영역
+    st.markdown("### ⚙️ 크롤링 설정")
+
     # 새 크롤링 시작 버튼 (결과가 있을 때만 표시)
     if st.session_state.show_results:
-        col1, col2 = st.columns([3, 1])
-        with col2:
-            if st.button("🔄 새 크롤링 시작", type="secondary", use_container_width=True):
-                reset_crawling_state()
-                st.rerun()
+        if st.button("🔄 새 크롤링 시작", type="secondary", use_container_width=True):
+            reset_crawling_state()
+            st.rerun()
 
-    # 사이드바 설정
-    st.sidebar.header("크롤링 설정")
+    # 설정 영역을 컬럼으로 나눔
+    col1, col2 = st.columns([2, 1])
 
-    # 크롤링 타입 선택
-    crawl_type = st.sidebar.selectbox(
-        "크롤링 타입 선택",
-        ["관세법령정보포털 판례", "국가법령정보센터 판례", "국가법령정보센터 내국세 판례",
-         "국내품목분류위원회 사례", "국내품목분류협의회 사례", "품목분류 사례",
-         "미국 품목분류 사례", "EU 품목분류 사례", "일본 품목분류 사례", "중국 품목분류 사례"],
-        help="크롤링할 데이터 유형을 선택하세요.",
-        disabled=st.session_state.show_results
-    )
-
-    # 사이트 이미지 표시
-    image_path = CRAWLER_IMAGES.get(crawl_type)
-    if image_path and os.path.exists(image_path):
-        st.sidebar.image(image_path, caption=f"{crawl_type} 화면", use_container_width=True)
-
-    # 페이지당 표시 개수 선택
-    items_per_page = 10
-    if crawl_type == "관세법령정보포털 판례":
-        items_per_page = st.sidebar.selectbox(
-            "페이지당 표시 개수",
-            [10, 20, 30, 50, 100],
-            index=0,
-            help="한 페이지에 표시할 데이터 개수를 선택하세요.",
-            disabled=st.session_state.show_results
-        )
-    elif crawl_type == "국가법령정보센터 판례":
-        items_per_page = st.sidebar.selectbox(
-            "페이지당 표시 개수",
-            [50, 100, 150],
-            index=0,
-            help="한 페이지에 표시할 데이터 개수를 선택하세요.",
-            disabled=st.session_state.show_results
-        )
-    elif crawl_type == "국가법령정보센터 내국세 판례":
-        items_per_page = st.sidebar.selectbox(
-            "페이지당 표시 개수",
-            [50, 100, 150],
-            index=0,
-            help="한 페이지에 표시할 데이터 개수를 선택하세요.",
-            disabled=st.session_state.show_results
-        )
-    elif crawl_type in ["국내품목분류위원회 사례", "국내품목분류협의회 사례", "품목분류 사례"]:
-        items_per_page = st.sidebar.selectbox(
-            "페이지당 표시 개수",
-            [10, 20, 30, 50, 100],
-            index=0,
-            help="한 페이지에 표시할 데이터 개수를 선택하세요.",
-            disabled=st.session_state.show_results
-        )
-    elif crawl_type in ["미국 품목분류 사례", "EU 품목분류 사례", "일본 품목분류 사례", "중국 품목분류 사례"]:
-        items_per_page = st.sidebar.selectbox(
-            "페이지당 표시 개수",
-            [10, 20, 30, 50, 100],
-            index=0,
-            help="한 페이지에 표시할 데이터 개수를 선택하세요.",
+    with col1:
+        # 크롤링 타입 선택
+        crawl_type = st.selectbox(
+            "크롤링 타입 선택",
+            ["관세법령정보포털 판례", "국가법령정보센터 판례", "국가법령정보센터 내국세 판례",
+             "국내품목분류위원회 사례", "국내품목분류협의회 사례", "품목분류 사례",
+             "미국 품목분류 사례", "EU 품목분류 사례", "일본 품목분류 사례", "중국 품목분류 사례"],
+            help="크롤링할 데이터 유형을 선택하세요.",
             disabled=st.session_state.show_results
         )
 
-    # 검색어 입력 필드
-    search_keyword = ""
-    if crawl_type == "국가법령정보센터 내국세 판례":
-        search_keyword = st.sidebar.text_input(
-            "검색어",
-            value="부가가치세",
-            help="검색할 키워드를 입력하세요.",
+    with col2:
+        # 페이지당 표시 개수 선택
+        items_per_page = 10
+        if crawl_type == "관세법령정보포털 판례":
+            items_per_page = st.selectbox(
+                "페이지당 표시 개수",
+                [10, 20, 30, 50, 100],
+                index=0,
+                help="한 페이지에 표시할 데이터 개수를 선택하세요.",
+                disabled=st.session_state.show_results
+            )
+        elif crawl_type == "국가법령정보센터 판례":
+            items_per_page = st.selectbox(
+                "페이지당 표시 개수",
+                [50, 100, 150],
+                index=0,
+                help="한 페이지에 표시할 데이터 개수를 선택하세요.",
+                disabled=st.session_state.show_results
+            )
+        elif crawl_type == "국가법령정보센터 내국세 판례":
+            items_per_page = st.selectbox(
+                "페이지당 표시 개수",
+                [50, 100, 150],
+                index=0,
+                help="한 페이지에 표시할 데이터 개수를 선택하세요.",
+                disabled=st.session_state.show_results
+            )
+        elif crawl_type in ["국내품목분류위원회 사례", "국내품목분류협의회 사례", "품목분류 사례"]:
+            items_per_page = st.selectbox(
+                "페이지당 표시 개수",
+                [10, 20, 30, 50, 100],
+                index=0,
+                help="한 페이지에 표시할 데이터 개수를 선택하세요.",
+                disabled=st.session_state.show_results
+            )
+        elif crawl_type in ["미국 품목분류 사례", "EU 품목분류 사례", "일본 품목분류 사례", "중국 품목분류 사례"]:
+            items_per_page = st.selectbox(
+                "페이지당 표시 개수",
+                [10, 20, 30, 50, 100],
+                index=0,
+                help="한 페이지에 표시할 데이터 개수를 선택하세요.",
+                disabled=st.session_state.show_results
+            )
+
+    # 추가 옵션 영역
+    col3, col4 = st.columns([2, 1])
+
+    with col3:
+        # 검색어 입력 필드
+        search_keyword = ""
+        if crawl_type == "국가법령정보센터 내국세 판례":
+            search_keyword = st.text_input(
+                "검색어",
+                value="부가가치세",
+                help="검색할 키워드를 입력하세요.",
+                disabled=st.session_state.show_results
+            )
+
+        # 국내품목분류 사례용 추가 설정
+        start_date = None
+        if (crawl_type == "국내품목분류위원회 사례" or
+            crawl_type == "국내품목분류협의회 사례" or
+            crawl_type == "품목분류 사례" or
+            crawl_type == "미국 품목분류 사례" or
+            crawl_type == "EU 품목분류 사례"):
+            start_date = st.date_input(
+                "검색 시작일",
+                value=datetime(2024, 1, 1),
+                help="검색 시작일을 선택하세요.",
+                disabled=st.session_state.show_results
+            ).strftime('%Y-%m-%d')
+
+    with col4:
+        # 크롤링 범위 설정
+        max_pages = st.number_input(
+            "크롤링할 페이지 수",
+            min_value=1,
+            max_value=50,
+            value=8,
+            help=f"크롤링할 페이지 수를 입력하세요 (페이지당 최대 {items_per_page}건)",
             disabled=st.session_state.show_results
         )
-
-    # 크롤링 범위 설정
-    st.sidebar.subheader("크롤링 범위 설정")
-
-    max_pages = st.sidebar.number_input(
-        "크롤링할 페이지 수",
-        min_value=1,
-        max_value=50,
-        value=8,
-        help=f"크롤링할 페이지 수를 입력하세요 (페이지당 최대 {items_per_page}건)",
-        disabled=st.session_state.show_results
-    )
-    st.sidebar.info(f"예상 크롤링 건수: 최대 {max_pages * items_per_page}건")
-
-    # 국내품목분류 사례용 추가 설정
-    start_date = None
-    if (crawl_type == "국내품목분류위원회 사례" or
-        crawl_type == "국내품목분류협의회 사례" or
-        crawl_type == "품목분류 사례" or
-        crawl_type == "미국 품목분류 사례" or
-        crawl_type == "EU 품목분류 사례"):
-        start_date = st.sidebar.date_input(
-            "검색 시작일",
-            value=datetime(2024, 1, 1),
-            help="검색 시작일을 선택하세요.",
-            disabled=st.session_state.show_results
-        ).strftime('%Y-%m-%d')
+        st.info(f"예상: 최대 {max_pages * items_per_page}건")
 
     # 크롤링 시작 버튼
-    if st.sidebar.button("크롤링 시작", type="primary", disabled=st.session_state.show_results):
+    if st.button("🚀 크롤링 시작", type="primary", disabled=st.session_state.show_results, use_container_width=True):
         # 상태 초기화
         reset_crawling_state()
 
@@ -769,37 +770,49 @@ def main():
                 use_container_width=True
             )
 
-    # 사용법 안내 (결과가 없을 때만 표시)
-    if not st.session_state.show_results:
-        st.markdown("---")
-        st.header("📖 사용법")
-        st.write("""
-        1. **크롤링 타입 선택**: 수집할 데이터 유형을 선택합니다.
-            - 관세법령정보포털 판례: 관세법령정보포털의 판례 데이터
-            - 국가법령정보센터 판례: 국가법령정보센터의 판례 데이터
-            - 국가법령정보센터 내국세 판례: 국가법령정보센터의 내국세 판례 데이터
-            - 국내품목분류위원회 사례: 품목분류 위원회결정사항 데이터
-            - 국내품목분류협의회 사례: 품목분류 협의회결정사항 데이터
-            - 품목분류 사례: 품목분류 사례 데이터
-            - 미국 품목분류 사례: 미국의 품목분류 사례 데이터
-            - EU 품목분류 사례: EU의 품목분류 사례 데이터
-            - 일본 품목분류 사례: 일본의 품목분류 사례 데이터
-            - 중국 품목분류 사례: 중국의 품목분류 사례 데이터
-        2. **크롤링 범위 설정**: 페이지 수 또는 목표 건수를 선택합니다.
-        3. **검색어 입력**: 필요한 경우 검색어를 입력합니다.
-        4. **크롤링 시작**: 버튼을 클릭하여 데이터 수집을 시작합니다.
-        5. **실시간 모니터링**: 진행 상황과 로그를 실시간으로 확인합니다.
-        6. **다운로드**: 크롤링 완료 후 JSON 파일과 마크다운 파일을 다운로드할 수 있습니다.
-        """)
+    # 사이드바: 안내 및 정보
+    st.sidebar.header("📚 사용 가이드")
 
-        st.header("⚠️ 주의사항")
-        st.warning("""
-        - 크롤링 시간은 페이지 수와 네트워크 상황에 따라 달라질 수 있습니다.
-        - 너무 많은 페이지를 한 번에 크롤링하면 시간이 오래 걸릴 수 있습니다.
-        - 웹사이트의 정책을 준수하여 적절한 간격으로 크롤링하세요.
-        - 국내품목분류 사례 크롤링 시 검색 시작일을 적절히 설정하세요.
-        - 크롤링 중에는 페이지를 새로고침하지 마세요.
-        """)
+    # 사이트 이미지 표시
+    image_path = CRAWLER_IMAGES.get(crawl_type)
+    if image_path and os.path.exists(image_path):
+        st.sidebar.image(image_path, caption=f"{crawl_type} 화면", use_container_width=True)
+
+    # 크롤러 타입별 설명
+    st.sidebar.markdown("### 📖 크롤러 설명")
+    crawler_descriptions = {
+        "관세법령정보포털 판례": "관세법령정보포털의 판례 데이터를 수집합니다. 관세 관련 법적 판단 사례를 확인할 수 있습니다.",
+        "국가법령정보센터 판례": "국가법령정보센터의 판례 데이터를 수집합니다. 다양한 법률 분야의 판례를 제공합니다.",
+        "국가법령정보센터 내국세 판례": "국가법령정보센터의 내국세 관련 판례를 검색어 기반으로 수집합니다.",
+        "국내품목분류위원회 사례": "품목분류 위원회의 결정사항 데이터를 수집합니다.",
+        "국내품목분류협의회 사례": "품목분류 협의회의 결정사항 데이터를 수집합니다.",
+        "품목분류 사례": "일반 품목분류 사례 데이터를 수집합니다.",
+        "미국 품목분류 사례": "미국의 품목분류 사례 데이터를 수집합니다.",
+        "EU 품목분류 사례": "EU의 품목분류 사례 데이터를 수집합니다.",
+        "일본 품목분류 사례": "일본의 품목분류 사례 데이터를 수집합니다.",
+        "중국 품목분류 사례": "중국의 품목분류 사례 데이터를 수집합니다."
+    }
+    st.sidebar.info(crawler_descriptions.get(crawl_type, ""))
+
+    # 사용법
+    st.sidebar.markdown("### 📖 사용법")
+    st.sidebar.markdown("""
+    1. **크롤링 타입 선택**: 수집할 데이터 유형을 선택합니다.
+    2. **옵션 설정**: 페이지당 개수, 검색어 등을 설정합니다.
+    3. **크롤링 시작**: 버튼을 클릭하여 데이터 수집을 시작합니다.
+    4. **실시간 모니터링**: 진행 상황과 로그를 실시간으로 확인합니다.
+    5. **다운로드**: 크롤링 완료 후 JSON/마크다운 파일을 다운로드합니다.
+    """)
+
+    # 주의사항
+    st.sidebar.markdown("### ⚠️ 주의사항")
+    st.sidebar.warning("""
+    - 크롤링 시간은 페이지 수와 네트워크 상황에 따라 달라질 수 있습니다.
+    - 너무 많은 페이지를 한 번에 크롤링하면 시간이 오래 걸릴 수 있습니다.
+    - 웹사이트의 정책을 준수하여 적절한 간격으로 크롤링하세요.
+    - 국내품목분류 사례 크롤링 시 검색 시작일을 적절히 설정하세요.
+    - 크롤링 중에는 페이지를 새로고침하지 마세요.
+    """)
 
 if __name__ == "__main__":
     main()
